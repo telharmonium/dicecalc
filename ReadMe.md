@@ -1,14 +1,22 @@
 # A Dice Calculator in Python
 
-A tokenizer and parser for calculating the results of (unnecessarily complex?) dice expressions such as `2d20 + 2` or `2d4(3d2)+9`
+A tokenizer and parser for calculating the results of (unnecessarily complex?) dice expressions such as `2d20 + 2`, `2d4(3d2+9)^2`, or `(2d4)d((3d20)^2d20)`.
 
 ## Example Usage
-Calculate the result of rolling 2 d20 dice, then adding 2 to that result:
-`python roll.py "2d20 + 2"`
+Calculate the result of rolling 2 d20 dice, then add 2 to that result:
+```
+python roll.py "2d20 + 2"
+```
 
 Do the same as the above, but output a dictionary describing the results of each individual roll, and how the dice expression was tokenized:
-`python roll.py -v "2d20 + 2"`
+```
+python roll.py -v "2d20 + 2"
+```
 
+This project includes a file of unit tests, primarily focused on validating things like the order of operations and handling of negative numbers. There are some basic tests of dice expressions, but the randomness inherent in these make them tedious to test.
+```
+python run-tests.py
+```
 
 # Notes on the Operation of this Parser
 This is a hopefully a Top Down Operational Precedence Parser, also known as a Pratt-style parser.
@@ -96,21 +104,30 @@ These errors, if present, are caught, and and a dictionary is constructed for th
 
 ## A note on the operation of operator_lparen_token.tokenAsInfix():
 As the infix form is performing multiplication, it should respect the order of operations. So, if the expression is of the form: 
-    3(4+5)^2
+```
+3(4+5)^2
+```
 
 we need to treat it as: 
-    3*((4+5)^2)
+```
+3*((4+5)^2)
+```
+
 rather than as:
-    (3*(4+5))^2
+```
+(3*(4+5))^2
+```
 
-Therefore, `operator_lparen_token.tokenAsInfix()` will first call `expression()` to collect and compute between ( and ) as it normally would, '(4+5)' in this case, with `expression()` returning when it hits )'s low lbp.
+Therefore, `operator_lparen_token.tokenAsInfix()` will first call `expression()` to collect and compute between ( and ) as it normally would, `(4+5)` in this case, with `expression()` returning when it hits the low LBP of `)`.
 
-However, any following operators with higher precedence than multiplication, '^2' in this case, need to be sent the results of this computed expression **before** we perform the multiplication and return our result.  Essentially we need to work in this order:
-    3(4+5)^2
-    3(9)^2
-    3*81
-    return 243
+However, any following operators with higher precedence than multiplication, `^2` in this case, need to be sent the results of this computed expression **before** we perform the multiplication and return our result.  Essentially we need to work in this order:
+```
+3(4+5)^2
+3(9)^2
+3*81
+return 243
+```
     
-Therefore we call `validateTokenAndCreateProxyLiteralToken()`, which will first ensure we've actually encountered ), and then instantiates a new `literal_token` object with the result of our parenthetical expression, '(4+5)', as its value.  This new token is then made the current value of the global token, and `expression()` is called again, essentially starting evaluation again, but beginning with the value resulting from '(4+5)', with the rbp of multiplication.
+Therefore we call `validateTokenAndCreateProxyLiteralToken()`, which will first ensure we've actually encountered `)`, and then instantiates a new `literal_token` object with the result of our parenthetical expression, `(4+5)`, as its value.  This new token is then made the current value of the global token, and `expression()` is called again, essentially starting evaluation again, but beginning with the value resulting from `(4+5)`, with the RBP of multiplication.
     
 The result of this `expression()` is returned to `operator_lparen_token.tokenAsInfix()`, where it is multiplied with the left argument and returned up the chain.
