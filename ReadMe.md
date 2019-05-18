@@ -1,68 +1,65 @@
 # A Dice Calculator in Python
 
-A tokenizer and Top Down Operation Parser for calculating the results of (unnecessarily complex?) dice expressions such as "2d20 + 2" or "2d4(3d2)"
+A tokenizer and parser for calculating the results of (unnecessarily complex?) dice expressions such as `2d20 + 2` or `2d4(3d2)+9`
 
 ## Example Usage
 Calculate the result of rolling 2 d20 dice, then adding 2 to that result:
 `python roll.py "2d20 + 2"`
 
-Do the same as the above, but provide verbose output regarding the results of each individual roll, and how the dice expression was tokenized:
+Do the same as the above, but output a dictionary describing the results of each individual roll, and how the dice expression was tokenized:
 `python roll.py -v "2d20 + 2"`
 
-# Notes on the operation of this Top Down Operational Precedence Parser
-(Also known as a Pratt-style parser)
 
-## A collection of links:
+# Notes on the Operation of this Parser
+This is a hopefully a Top Down Operational Precedence Parser, also known as a Pratt-style parser.
+
+## Collected Links on TDOP Parsers:
 
 ### General
-* Pratt himself participated in this discussion of his technique on Reddit:
-    * http://www.reddit.com/r/programming/comments/g7892/expression_parsing_made_easy_if_recursive_descent/
-
+* Pratt himself participated [in this discussion of his technique on Reddit](http://www.reddit.com/r/programming/comments/g7892/expression_parsing_made_easy_if_recursive_descent/)
 * Two really good resources with diagrams showing the operation of a Pratt Parser:
-    * https://github.com/joyjding/spot
-    * http://l-lang.org/blog/TDOP---Pratt-parser-in-pictures/
+    * [https://github.com/joyjding/spot](https://github.com/joyjding/spot)
+    * [http://l-lang.org/blog/TDOP---Pratt-parser-in-pictures/](http://l-lang.org/blog/TDOP---Pratt-parser-in-pictures/)
     (The second link above is especially great.)
 
 ### Python Specific
-* A relatively simplified introduction to the subject, in Python.  My implementation started here:
-    * http://eli.thegreenplace.net/2010/01/02/top-down-operator-precedence-parsing/d1
-* A much more complex article in Python:
-    * http://effbot.org/zone/simple-top-down-parsing.htm
+* A relatively simplified [introduction to the subject](http://eli.thegreenplace.net/2010/01/02/top-down-operator-precedence-parsing/d1), in Python.  My implementation started here.
+* A [much more complex article](http://effbot.org/zone/simple-top-down-parsing.htm) in Python
 
 ### Javascript Specific
-* Crockford's article on Top Down Operator Precedence:
-    * http://javascript.crockford.com/tdop/tdop.html
-* This project implements a trop equation parser in javascript:
-    * https://github.com/kevinmehall/EquationExplorer/blob/master/tdop_math.js
-* While this uses a modified version of Crockford's tokenizer:
-    * https://github.com/kevinmehall/EquationExplorer/blob/master/tokens.js
-* An article on writing a tokenizer (lexer) in javascript:
-    * http://ariya.ofilabs.com/2011/08/math-evaluator-in-javascript-part1.html
+* [Crockford's seminal article](http://javascript.crockford.com/tdop/tdop.html) on Top Down Operator Precedence
+* This project [implements a trop equation parser in javascript](https://github.com/kevinmehall/EquationExplorer/blob/master/tdop_math.js)
+* While [this uses a modified version](https://github.com/kevinmehall/EquationExplorer/blob/master/tokens.js) of Crockford's tokenizer
+* An [article on writing a tokenizer](http://ariya.ofilabs.com/2011/08/math-evaluator-in-javascript-part1.html) (lexer) in javascript
 
 
-### NOTE:
-I've modified several variable names from the standard way they're used:
-`tokenAsPrefix` is usually called nud for null denotation.
-`tokenAsInfix` is usually called led for left denotation.
-
-
-## How it Works, In General:
-The expression should be passed into tokenizer, which will attempt to identify meaningful tokens out of it.  These tokens will become dictionaries containing their Type and their Value.
+## How This Project Works, In General:
+The expression should be passed into `tokenizer`, which will attempt to identify meaningful tokens out of it.  These tokens will become dictionaries containing their Type and their Value.
 At the moment there are only two Types: 
-    number
-    operator
+```
+number
+operator
+```
+
 If the tokenizer doesn't like the looks of part of the expression, it will create a token as usual, but attach these error flags to it:
-    errorType
-    errorMsg
+```
+errorType
+errorMsg
+```
 
-Tokenizer will return a dictionary with a list of these token dicts which is intended to be passed straight into tdop.
+**Note:** I've modified two variable names from the way they're traditionally used in a TDOP parser:
+`tokenAsPrefix` is usually called `nud` for null denotation.
+`tokenAsInfix` is usually called `led` for left denotation.
 
-Tdop creates a generator, `tokenMapper()`, which will, upon each call, yield an instance of appropriate class for that token, be it operator or literal number.
+
+Tokenizer will return a dictionary with a list of these token dicts which is intended to be passed straight into `tdop`.
+
+`tdop` creates a generator, `tokenMapper()`, which will, upon each call, yield an instance of appropriate class for that token, be it operator or literal number.
     
-The magic all hapens in `expression()`, which calls `tokenAsPrefix()` or `tokenAsInfix()` on the currently active token instance, and determines the order of operations between tokens according to the passed in rightBindingPower and the token's innate leftBindingPower.
+The magic all hapens in `expression()`, which calls `tokenAsPrefix()` or `tokenAsInfix()` on the currently active token instance, and determines the order of operations between tokens according to the passed in `rightBindingPower` and the token's innate `leftBindingPower`.
 
-If an error was attached to a token by tokenizer, a `SyntaxError` will be raised by `tokenMapper()` when it reaches that token.  If an error occurs during an operation a different `SyntaxError` will be raised, and an error message attached to the token which triggered it, if appropriate.
-| 
+If an error was attached to a token by `tokenizer`, a `SyntaxError` will be raised by `tokenMapper()` when it reaches that token.  If an error occurs during an operation a different `SyntaxError` will be raised, and an error message attached to the token which triggered it, if appropriate.
+
 These errors, if present, are caught, and and a dictionary is constructed for the return value. A successful return value might look like this for the expression `3 * 2d20`:
 
     {'diceRolls': [{'rolls': [15, 14], 'sides': 20, 'sum': 29}],
@@ -108,7 +105,7 @@ rather than as:
 
 Therefore, `operator_lparen_token.tokenAsInfix()` will first call `expression()` to collect and compute between ( and ) as it normally would, '(4+5)' in this case, with `expression()` returning when it hits )'s low lbp.
 
-However, any following operators with higher precedence than multiplication, '^2' in this case, need to be sent the results of this computed expression *before* we perform the multiplication and return our result.  Essentially we need to work in this order:
+However, any following operators with higher precedence than multiplication, '^2' in this case, need to be sent the results of this computed expression **before** we perform the multiplication and return our result.  Essentially we need to work in this order:
     3(4+5)^2
     3(9)^2
     3*81
